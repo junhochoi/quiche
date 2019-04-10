@@ -93,6 +93,8 @@ pub extern fn quiche_h3_event_type(ev: &h3::Event) -> u32 {
         h3::Event::Headers { .. } => 0,
 
         h3::Event::Data { .. } => 1,
+
+        h3::Event::StreamClosed { .. } => 2,
     }
 }
 
@@ -121,6 +123,8 @@ pub extern fn quiche_h3_event_for_each_header(
             },
 
         h3::Event::Data { .. } => unreachable!(),
+
+        h3::Event::StreamClosed { .. } => unreachable!(),
     }
 }
 
@@ -138,6 +142,19 @@ pub extern fn quiche_h3_event_data(
 
             data.len()
         },
+
+        h3::Event::StreamClosed { .. } => unreachable!(),
+    }
+}
+
+#[no_mangle]
+pub extern fn quiche_h3_event_stream_closed(ev: &h3::Event) {
+    match ev {
+        h3::Event::Headers { .. } => unreachable!(),
+
+        h3::Event::Data { .. } => unreachable!(),
+
+        h3::Event::StreamClosed { .. } => (),
     }
 }
 

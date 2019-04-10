@@ -170,6 +170,10 @@
 //!             # return;
 //!         },
 //!
+//!         Ok((stream_id, quiche::h3::Event::StreamClosed())) => {
+//!             // Peer terminated stream, handle it.
+//!         }
+//!
 //!         Err(quiche::h3::Error::Done) => {
 //!             // Done reading.
 //!             break;
@@ -206,6 +210,10 @@
 //!             println!("Received {} bytes of payload on stream {}",
 //!                      data.len(), stream_id);
 //!         },
+//!
+//!         Ok((stream_id, quiche::h3::Event::StreamClosed())) => {
+//!             // Peer terminated stream, handle it.
+//!         }
 //!
 //!         Err(quiche::h3::Error::Done) => {
 //!             // Done reading.
@@ -459,6 +467,9 @@ pub enum Event {
 
     /// Data was received.
     Data(Vec<u8>),
+
+    // Stream was closed,
+    StreamClosed(),
 }
 
 struct ConnectionSettings {
@@ -655,6 +666,48 @@ impl Connection {
         Ok(written)
     }
 
+    fn critical_stream_closed(
+        &mut self, conn: &mut super::Connection,
+    ) -> Result<()> {
+        let mut crit_closed = false;
+
+        if let Some(s) = self.control_stream_id {
+            crit_closed |= conn.stream_finished(s);
+        }
+
+        if let Some(s) = self.local_qpack_streams.encoder_stream_id {
+            crit_closed |= conn.stream_finished(s);
+        }
+
+        if let Some(s) = self.local_qpack_streams.decoder_stream_id {
+            crit_closed |= conn.stream_finished(s);
+        }
+
+        if let Some(s) = self.peer_control_stream_id {
+            crit_closed |= conn.stream_finished(s);
+        }
+
+        if let Some(s) = self.peer_qpack_streams.encoder_stream_id {
+            crit_closed |= conn.stream_finished(s);
+        }
+
+        if let Some(s) = self.peer_qpack_streams.decoder_stream_id {
+            crit_closed |= conn.stream_finished(s);
+        }
+
+        if crit_closed {
+            conn.close(
+                true,
+                Error::ClosedCriticalStream.to_wire(),
+                b"Critical stream closed.",
+            )?;
+
+            return Err(Error::ClosedCriticalStream);
+        }
+
+        Ok(())
+    }
+
     /// Processes HTTP/3 data received from the peer.
     ///
     /// On success it returns an [`Event`] as well as the event's source stream
@@ -665,6 +718,8 @@ impl Connection {
     /// [`send_response()`]: struct.Connection.html#method.send_response
     /// [`send_body()`]: struct.Connection.html#method.send_body
     pub fn poll(&mut self, conn: &mut super::Connection) -> Result<(u64, Event)> {
+        self.critical_stream_closed(conn)?;
+
         let streams: Vec<u64> = conn.readable().collect();
 
         // Process HTTP/3 data from readable streams.
@@ -811,6 +866,10 @@ impl Connection {
                         // TODO: implement CANCEL_PUSH frame
                     },
                 }
+            }
+
+            if conn.stream_finished(*stream_id) {
+                return Ok((*stream_id, Event::StreamClosed()));
             }
         }
 

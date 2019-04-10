@@ -307,6 +307,8 @@ fn main() -> Result<(), Box<std::error::Error>> {
                         );
                     },
 
+                    Ok((_stream_id, quiche::h3::Event::StreamClosed())) => {},
+
                     Err(quiche::h3::Error::Done) => {},
 
                     Err(e) => {
