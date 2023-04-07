@@ -1,7 +1,7 @@
 OS := $(shell uname)
 
 SOURCE_DIR = ../src
-BUILD_DIR = $(CURDIR)/build
+BUILD_DIR = $(CURDIR)/../../target
 LIB_DIR = $(BUILD_DIR)/debug
 INCLUDE_DIR = ../include
 
@@ -12,8 +12,8 @@ ifeq ($(OS), Darwin)
 CFLAGS += -framework Security
 endif
 
-LIBCRYPTO_DIR = $(dir $(shell find ${BUILD_DIR} -name libcrypto.a))
-LIBSSL_DIR = $(dir $(shell find ${BUILD_DIR} -name libssl.a))
+LIBCRYPTO_DIR = $(dir $(shell find ${BUILD_DIR} -name libcrypto.a | head -1))
+LIBSSL_DIR = $(dir $(shell find ${BUILD_DIR} -name libssl.a | head -1))
 
 LDFLAGS = -L$(LIBCRYPTO_DIR) -L$(LIBSSL_DIR) -L$(LIB_DIR)
 
@@ -37,4 +37,4 @@ $(LIB_DIR)/libquiche.a: $(shell find $(SOURCE_DIR) -type f -name '*.rs')
 	cd .. && cargo build --target-dir $(BUILD_DIR) --features ffi
 
 clean:
-	@$(RM) -rf client server http3-client http3-server build/ *.dSYM/
+	@$(RM) -rf client server http3-client http3-server $(BUILD_DIR)/ *.dSYM/
