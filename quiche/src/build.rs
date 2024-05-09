@@ -157,8 +157,11 @@ fn get_boringssl_cmake_config() -> cmake::Config {
 
         "windows" => match arch.as_ref() {
             "x86" => {
-                // CMAKE_SYSTEM_PROCESSOR need to be lowercase
-                boringssl_cmake.define("CMAKE_SYSTEM_PROCESSOR", "x86");
+                boringssl_cmake.define(
+                    "CMAKE_TOOLCHAIN_FILE",
+                    pwd.join("deps/boringssl/src/util/32-bit-toolchain.cmake")
+                        .as_os_str(),
+                );
 
                 boringssl_cmake
             },
