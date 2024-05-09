@@ -155,6 +155,17 @@ fn get_boringssl_cmake_config() -> cmake::Config {
             _ => boringssl_cmake,
         },
 
+        "windows" => match arch.as_ref() {
+            "x86" => {
+                // CMAKE_SYSTEM_PROCESSOR need to be lowercase
+                boringssl_cmake.define("CMAKE_SYSTEM_PROCESSOR", "x86");
+
+                boringssl_cmake
+            },
+
+            _ => boringssl_cmake,
+        },
+
         _ => {
             // Configure BoringSSL for building on 32-bit non-windows platforms.
             if arch == "x86" && os != "windows" {
